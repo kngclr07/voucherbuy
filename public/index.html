@@ -1,43 +1,115 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>Buy Voucher</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Buy WiFi Voucher</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f2f2f2;
+      padding: 30px;
+      color: #333;
+    }
+    .container {
+      max-width: 500px;
+      margin: auto;
+      background: white;
+      padding: 25px;
+      border-radius: 8px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+    h2 {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    input[type="text"], input[type="submit"] {
+      width: 100%;
+      padding: 12px;
+      margin: 8px 0;
+      box-sizing: border-box;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+    }
+    input[type="submit"] {
+      background-color: #28a745;
+      color: white;
+      cursor: pointer;
+      font-weight: bold;
+    }
+    input[type="submit"]:hover {
+      background-color: #218838;
+    }
+    #voucherBox {
+      margin-top: 20px;
+      font-size: 1.1rem;
+      text-align: center;
+    }
+    .qr {
+      text-align: center;
+      margin: 20px 0;
+    }
+    .qr img {
+      max-width: 200px;
+    }
+  </style>
 </head>
 <body>
-  <h2>Buy Voucher</h2>
-  <form id="buyForm">
-    <input name="ref" placeholder="GCash Reference Number" required />
-    <input name="phone" placeholder="Your Mobile Number" required />
-    <button type="submit">Submit</button>
-  </form>
+  <div class="container">
+    <h2>Buy WiFi Voucher (₱10)</h2>
 
-  <div id="loading" style="display:none">⏳ Waiting for confirmation...</div>
-  <div id="voucher" style="display:none; font-size: 24px; margin-top: 10px;"></div>
+    <div class="qr">
+      <p><strong>Send ₱10 to this GCash number:</strong><br> <code>0917-XXX-XXXX</code></p>
+      <p>Scan this QR to pay:</p>
+      <img src="your_qr_code_url.png" alt="GCash QR Code">
+    </div>
+
+    <form id="buyForm">
+      <label>Your GCash Mobile Number</label>
+      <input type="text" name="phone" placeholder="e.g. 09171234567" required>
+
+      <label>GCash Reference Number</label>
+      <input type="text" name="ref" placeholder="e.g. 1234XXXX5678" required>
+
+      <input type="submit" value="Submit">
+    </form>
+
+    <div id="voucherBox">Waiting for your voucher...</div>
+  </div>
 
   <script>
     const form = document.getElementById('buyForm');
+    const voucherBox = document.getElementById('voucherBox');
+    let phoneNumber = '';
+
     form.onsubmit = async (e) => {
       e.preventDefault();
-      const formData = new FormData(form);
-      document.getElementById('loading').style.display = 'block';
+      const data = new FormData(form);
+      phoneNumber = data.get('phone');
 
-      const res = await fetch('/submit', {
+      // Send phone + ref to server
+      await fetch('/submit', {
         method: 'POST',
-        body: formData
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          phone: phoneNumber,
+          ref: data.get('ref')
+        })
       });
-      const { id } = await res.json();
 
-      const interval = setInterval(async () => {
-        const r = await fetch('/check?id=' + id);
-        const data = await r.json();
-        if (data.voucher) {
-          clearInterval(interval);
-          document.getElementById('loading').style.display = 'none';
-          document.getElementById('voucher').innerText = "🎟️ Your Voucher Code: " + data.voucher;
-          document.getElementById('voucher').style.display = 'block';
-        }
-      }, 5000);
+      voucherBox.textContent = 'Waiting for payment confirmation...';
+      checkVoucher(); // Start polling
     };
+
+    async function checkVoucher() {
+      const res = await fetch(`/check-voucher?phone=${encodeURIComponent(phoneNumber)}`);
+      const data = await res.json();
+      if (data.voucher) {
+        voucherBox.innerHTML = `<strong>Your Voucher Code:</strong> <code>${data.voucher}</code>`;
+      } else {
+        setTimeout(checkVoucher, 5000); // Try again in 5 seconds
+      }
+    }
   </script>
 </body>
 </html>
