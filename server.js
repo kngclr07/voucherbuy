@@ -1,47 +1,48 @@
 const express = require('express');
-const bodyParser = require('body-parser');
 const nodemailer = require('nodemailer');
+const imaps = require('imap-simple');
+const dotenv = require('dotenv');
 const path = require('path');
-require('dotenv').config();
+
+dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-
-const submissions = {}; // Store { id: { ref, phone, voucher } }
-
-app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.static('public'));
+app.use(express.urlencoded({ extended: true }));
+app.use(express.json());
 
-const transporter = nodemailer.createTransport({
-  service: 'gmail',
-  auth: {
-    user: process.env.EMAIL,
-    pass: process.env.EMAIL_PASSWORD,
-  },
+const voucherMap = new Map(); // Key: phone number, Value: voucher code
+
+// === Your email checking logic here ===
+async function checkEmails() {
+  // Connect to Gmail via IMAP and look for matching references
+  // Example: if ref# and phone number match, generate a voucher:
+  const sampleVoucher = '1234567';
+  const samplePhone = '09123456789';
+
+  voucherMap.set(samplePhone, sampleVoucher);
+}
+
+// Poll Gmail every 30 seconds
+setInterval(checkEmails, 30000);
+
+// === Routes ===
+app.post('/submit', (req, res) => {
+  const { phone, ref } = req.body;
+  // Store for polling
+  res.send({ status: 'waiting' });
 });
 
-app.post('/submit', async (req, res) => {
-  const id = Date.now().toString();
-  const { ref, phone } = req.body;
-  submissions[id] = { ref, phone, voucher: null };
-
-  await transporter.sendMail({
-    from: process.env.EMAIL,
-    to: process.env.EMAIL,
-    subject: `Voucher Request ${id}`,
-    text: `GCash Ref: ${ref}\nPhone: ${phone}\nReply with code only.`,
-  });
-
-  res.json({ id });
+app.get('/check-voucher', (req, res) => {
+  const phone = req.query.phone;
+  const voucher = voucherMap.get(phone);
+  if (voucher) {
+    res.send({ voucher });
+    voucherMap.delete(phone); // only show once
+  } else {
+    res.send({ voucher: null });
+  }
 });
 
-app.get('/check', (req, res) => {
-  const sub = submissions[req.query.id];
-  res.json({ voucher: sub?.voucher || null });
-});
-
-app.listen(PORT, () => {
-  console.log(`Server running on http://localhost:${PORT}`);
-});
-
-module.exports = { submissions };
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
