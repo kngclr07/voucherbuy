@@ -1,26 +1,43 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Buy Voucher</title>
 </head>
-<body style="font-family:sans-serif; max-width:500px; margin:auto;">
-  <h1>Buy Voucher</h1>
-  <p>Send ₱10 to:</p>
-  <h2>GCash: 09XXXXXXXXX</h2>
-  <img src="/gcash_qr.png" alt="GCash QR" width="200"/>
-
-  <form action="/submit" method="POST">
-    <label>GCash Reference No:<br>
-      <input type="text" name="refno" required>
-    </label><br><br>
-
-    <label>Your Mobile Number:<br>
-      <input type="text" name="phone" required>
-    </label><br><br>
-
+<body>
+  <h2>Buy Voucher</h2>
+  <form id="buyForm">
+    <input name="ref" placeholder="GCash Reference Number" required />
+    <input name="phone" placeholder="Your Mobile Number" required />
     <button type="submit">Submit</button>
   </form>
+
+  <div id="loading" style="display:none">⏳ Waiting for confirmation...</div>
+  <div id="voucher" style="display:none; font-size: 24px; margin-top: 10px;"></div>
+
+  <script>
+    const form = document.getElementById('buyForm');
+    form.onsubmit = async (e) => {
+      e.preventDefault();
+      const formData = new FormData(form);
+      document.getElementById('loading').style.display = 'block';
+
+      const res = await fetch('/submit', {
+        method: 'POST',
+        body: formData
+      });
+      const { id } = await res.json();
+
+      const interval = setInterval(async () => {
+        const r = await fetch('/check?id=' + id);
+        const data = await r.json();
+        if (data.voucher) {
+          clearInterval(interval);
+          document.getElementById('loading').style.display = 'none';
+          document.getElementById('voucher').innerText = "🎟️ Your Voucher Code: " + data.voucher;
+          document.getElementById('voucher').style.display = 'block';
+        }
+      }, 5000);
+    };
+  </script>
 </body>
 </html>
