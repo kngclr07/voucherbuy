@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Buy Voucher</title>
+</head>
+<body style="font-family:sans-serif; max-width:500px; margin:auto;">
+  <h1>Buy Voucher</h1>
+  <p>Send ₱10 to:</p>
+  <h2>GCash: 09XXXXXXXXX</h2>
+  <img src="/gcash_qr.png" alt="GCash QR" width="200"/>
+
+  <form action="/submit" method="POST">
+    <label>GCash Reference No:<br>
+      <input type="text" name="refno" required>
+    </label><br><br>
+
+    <label>Your Mobile Number:<br>
+      <input type="text" name="phone" required>
+    </label><br><br>
+
+    <button type="submit">Submit</button>
+  </form>
+</body>
+</html>
